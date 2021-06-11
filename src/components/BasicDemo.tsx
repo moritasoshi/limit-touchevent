@@ -49,6 +49,7 @@ class BasicDemo extends React.Component<{}, any> {
               <p>single content</p>
               <p>single content</p>
               <p>single content</p>
+              <p>main content</p>
             </div>
           </Tabs>
         </div>
