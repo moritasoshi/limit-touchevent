@@ -2,57 +2,56 @@ import * as React from "react";
 import css from "./index.module.scss";
 
 import BasicDemo from "../components/BasicDemo";
-import { parseBody } from "next/dist/next-server/server/api-utils";
+
+const container = process.browser
+  ? document.getElementById("index_container")
+  : null;
 
 const Home: React.FC = () => {
   React.useEffect(() => {
-    let touchStartX: number;
-    let touchStartY: number;
+    let startCoordinates: { x: number; y: number };
+    let endCoordinates: { x: number; y: number };
 
-    let touchEndX: number;
-    let touchEndY: number;
-
-    const getStartCoordinate = (e: TouchEvent) => {
+    const handleTouchStart = (e: TouchEvent) => {
       const touchObj = e.changedTouches[0];
-      touchStartX = touchObj.pageX;
-      touchStartY = touchObj.pageY;
+      startCoordinates = { x: touchObj.pageX, y: touchObj.pageY };
     };
 
-    const getEndCoordinate = (e: TouchEvent) => {
+    const touchEndStopBubbling = (e: TouchEvent) => {
       const touchObj = e.changedTouches[0];
-      touchEndX = touchObj.pageX;
-      touchEndY = touchObj.pageY;
-    };
+      endCoordinates = { x: touchObj.pageX, y: touchObj.pageY };
 
-    // 角度を計算
-    const calcDegree = (x1, y1, x2, y2) => {
-      const radian = Math.atan2(y2 - y1, x2 - x1);
-      return radian * (180 / Math.PI);
-    };
+      // touchstartとtouchendの座標からスワイプ角度を計算
+      const calcAngle = (startCoordinates, endCoordinates) => {
+        const radian = Math.atan2(
+          endCoordinates.y - startCoordinates.y,
+          endCoordinates.x - startCoordinates.x
+        );
+        return radian * (180 / Math.PI);
+      };
+      const angle = Math.abs(calcAngle(startCoordinates, endCoordinates));
 
-    // 上下左右の方向が曖昧なスクロールを禁止
-    const limitSwipe = (e: TouchEvent) => {
-      getEndCoordinate(e);
-      const degree = calcDegree(touchStartX, touchStartY, touchEndX, touchEndY);
-      const degreeAbs = Math.abs(degree);
-      if (degreeAbs >= 30 && degreeAbs <= 60) {
-        e.stopImmediatePropagation();
-      } else if (degreeAbs >= 120 && degreeAbs <= 150) {
-        e.stopImmediatePropagation();
+      if ((angle >= 15 && angle <= 165)) {
+        // スワイプ角度が15°〜165°の場合は資産タブの切り替えを禁止
+        // タブ切り替えのイベントへのバブリングをキャンセル
+        e.stopPropagation();
       }
-      console.log(`degree: ${degree}`);
+      console.log(`angle: ${angle}`);
     };
 
-    if (process.browser) {
-      const body = document.querySelector("body");
-      const next = document.getElementById("index_container");
-
-      next.addEventListener("touchstart", getStartCoordinate, {
+    if (container) {
+      container.addEventListener("touchstart", handleTouchStart, {
         passive: false,
       });
-      next.addEventListener("touchend", limitSwipe);
-      return () => {};
+      container.addEventListener("touchend", touchEndStopBubbling);
     }
+
+    return (): void => {
+      if (container) {
+        container.removeEventListener("touchstart", handleTouchStart);
+        container.removeEventListener("touchend", touchEndStopBubbling);
+      }
+    };
   });
   return (
     <div className={css.container} id={"index_container"}>
